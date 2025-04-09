@@ -1,0 +1,66 @@
+specVersion: '0.2' # FIXED: Current version identifier
+
+goalDescription: | # MANDATORY: Multi-line string recommended
+  # Example: Generate a backend API for managing 'InventoryItem' records,
+  # requiring 'Admin' role for writes and 'Viewer' for reads.
+  Generate a secure API for [Primary Function] regarding [Primary Entity],
+  enforcing [Key Business Rule or Access Control].
+
+applicationType: CRUD_API # MANDATORY (For Phase 1, other types TBD)
+# Other potential values later: WebFormApp, BatchProcess, DataPipeline, etc.
+
+targetEntity: ontology:<RootOntologyClassName> # MANDATORY for CRUD_API
+# Purpose: The main schema.org entity this API revolves around.
+# Example: ontology:Product, ontology:Person, ontology:Event, ontology:Order
+
+globalConfig: # OPTIONAL: Define reusable configurations/capability instances
+  # Example: Reusable AuthN setup referenced by endpoints via alias *stdAuthN
+  standardAuthN: &stdAuthN
+    capability: VC:AuthN_JWTBearer # Reference the VC type
+    config:
+      jwks_url: 'env:AUTH_JWKS_URL' # Placeholder for environment variable
+      audience: 'urn:your-api-audience' # Static value
+      issuer: 'env:AUTH_ISSUER_URL'
+    output: verifiedClaims # Named output for use in subsequent steps
+
+  # Example: Reusable Persistence setup referenced by endpoints via alias *defaultDB
+  defaultDatabase: &defaultDB
+    capability: VC:BasicPersistenceAdapter[InMemory] # Or VC:PersistenceAdapter[SQLAlchemy] etc.
+    # config: # Example for SQL
+    #   connection_string_env: "DATABASE_URL"
+    #   echo_sql: false
+
+nfrs: # OPTIONAL: Non-Functional Requirements (Simple KVs for v0.2)
+  target_response_time_ms: 1000 # Example: target response time
+  securityLevel: Medium # Example: hint for security choices/checks
+  compliance: [PII_Basic] # Example: hint for compliance checks by Guardian++
+
+projectionModels: # OPTIONAL: Define data subsets for APIs/workflows
+  # --- Example Projection 1 ---
+  <YourProjectionNameForRead>: # e.g., ProductSummary
+    basedOn: <ontology:ClassName> # e.g., ontology:Product
+    description: 'Data subset returned for reading/listing resources.'
+    includeFields: # List of snake_case field names from the Pydantic Ontology model
+      - id # Assuming 'id' exists
+      - name
+      - sku
+      # ... other fields to include ...
+  # --- Example Projection 2 ---
+  <YourProjectionNameForWrite>: # e.g., ProductInput
+    basedOn: <ontology:ClassName> # e.g., ontology:Product
+    description: 'Data subset accepted for creating/updating resources.'
+    includeFields:
+      - name
+      - description
+      - sku
+      # ... other writable fields ...
+  # ... add more projections as needed ...
+
+endpoints: # MANDATORY for applicationType: CRUD_API
+  # --- List of Endpoint Definitions ---
+  - # Example Endpoint Structure (details below)
+    path: '/your/resource/{resourceId}'
+    method: GET | POST | PUT | DELETE | PATCH # Choose one
+    # ... other endpoint keys ...
+    workflow:
+      # ... list of steps for this endpoint ...

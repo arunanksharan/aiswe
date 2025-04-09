@@ -1,0 +1,85 @@
+endpoints:
+  # --- Endpoint 1: Create Contact ---
+  - path: "/contacts"
+    method: POST
+    summary: "Create a new contact."
+    requestBody:
+      required: true
+      projection: projection:ContactWriteData # Use projection for input validation
+    responses:
+      '201': # Use string keys for HTTP status codes
+        description: "Contact created successfully."
+        projection: projection:ContactCoreData # Use projection for response structure
+      '400':
+        description: "Invalid input data."
+      '401':
+        description: "Authentication failed."
+      '403':
+        description: "Authorization failed (Requires 'Writer' role)."
+    workflow:
+      - stepId: authN_post # Unique within this endpoint's workflow
+        capabilityRef: *jwtAuthN # Reuse global AuthN step using YAML alias
+        # output: authClaims (implied name reuse)
+      - stepId: authZ_post
+        capability: VC:AuthZ_SimpleRBAC
+        config: { required_role: "Writer", role_claim_path: "roles" }
+        input: authN_post.authClaims # Explicit input from previous step's output
+      - stepId: createContact
+        capability: VC:CRUDHandler
+        config:
+          entity: ontology:Person
+          persistenceAdapterRef: *inMemoryContacts # Reuse global persistence adapter
+          operation: Create
+        input: requestBody # Implicit input from endpoint definition
+        inputProjection: projection:ContactWriteData # Validate input against this subset
+        output: newContactRecord
+        outputProjection: projection:ContactCoreData # Ensure output conforms to this subset
+
+  # --- Endpoint 2: Read Contact ---
+  - path: "/contacts/{contactId}" # Use standard path parameter syntax
+    method: GET
+    summary: "Get contact by ID."
+    parameters:
+      - name: contactId
+        in: path
+        required: true
+        schema:
+          typeRef: ontology:UUID # Specify type using Ontology (assume UUID base type exists)
+          description: "ID of the contact to retrieve."
+    responses:
+      '200':
+        description: "Contact details."
+        projection: projection:ContactCoreData
+      '401':
+        description: "Authentication failed."
+      '403':
+        description: "Authorization failed (Requires 'Reader' role)."
+      '404':
+        description: "Contact not found."
+    workflow:
+      - stepId: authN_get
+        capabilityRef: *jwtAuthN
+      - stepId: authZ_get
+        capability: VC:AuthZ_SimpleRBAC
+        config: { required_role: "Reader", role_claim_path: "roles" }
+        input: authN_get.authClaims
+      - stepId: readContact
+        capability: VC:CRUDHandler
+        config:
+          entity: ontology:Person
+          persistenceAdapterRef: *inMemoryContacts
+          operation: Read
+        # 'input' for ID is implicitly mapped from path parameter 'contactId' by Synapse++
+        output: foundContact
+        outputProjection: projection:ContactCoreData
+      # Note: Synapse++/Guardian++ needs to handle the case where readContact finds nothing and map it to a 404 response.
+
+  # --- Define PUT /contacts/{contactId} ---
+  # Similar structure: AuthN, AuthZ (Writer), CRUDHandler (Update), Response models
+
+  # --- Define DELETE /contacts/{contactId} ---
+  # Similar structure: AuthN, AuthZ (Writer), CRUDHandler (Delete), Response models (e.g., 204)
+
+  # --- Define GET /contacts (List) --- Optional for basic CRUD
+  # Similar structure: AuthN, AuthZ (Reader), CRUDHandler (List), Response models (List[ContactCoreData])
+  # Would likely need query parameter definitions in 'parameters' section.

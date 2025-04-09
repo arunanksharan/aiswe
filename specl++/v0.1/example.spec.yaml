@@ -1,0 +1,84 @@
+specVersion: 0.2
+goalDescription: 'Secure CRUD API for managing basic Person contact information.'
+applicationType: CRUD_API
+targetEntity: ontology:Person
+nfrs:
+  target_response_time_ms: 500
+
+projectionModels:
+  ContactCoreData:
+    basedOn: ontology:Person
+    includeFields: [id, givenName, familyName, email, telephone] # 'id' assumed available
+  ContactInputData:
+    basedOn: ontology:Person
+    includeFields: [givenName, familyName, email, telephone]
+
+workflow:
+  # --- Global VCs / Config (Example - could be defined differently) ---
+  - stepId: persistenceService
+    capability: VC:BasicPersistenceAdapter[InMemory]
+    config: {} # No specific config for basic in-memory
+
+  - stepId: authN_check
+    capability: VC:AuthN_JWTBearer
+    config:
+      jwks_url_env: AUTH_JWKS_URL
+      audience: 'urn:contact-api'
+      issuer: 'env:AUTH_ISSUER_URL'
+    output: authClaims
+
+  # --- POST /contacts ---
+  - stepId: authZ_post
+    capability: VC:AuthZ_SimpleRBAC
+    config: { required_role: 'Creator', role_claim_path: 'roles' }
+    input: authClaims
+
+  - stepId: createContactHandler
+    capability: VC:CRUDHandler
+    config:
+      {
+        entity: ontology:Person,
+        persistenceAdapter: persistenceService,
+        operation: Create,
+      }
+    input: requestBody
+    inputProjection: projection:ContactInputData
+    output: newContact
+    outputProjection: projection:ContactCoreData
+
+  - stepId: postContactEndpoint
+    capability: VC:RESTEndpoint
+    config:
+      path: '/contacts'
+      method: POST
+      requestModel: projection:ContactInputData
+      responseModel: projection:ContactCoreData
+      handlerSequence: [authN_check, authZ_post, createContactHandler]
+
+  # --- GET /contacts/{id} ---
+  - stepId: authZ_get
+    capability: VC:AuthZ_SimpleRBAC
+    config: { required_role: 'Reader', role_claim_path: 'roles' }
+    input: authClaims
+
+  - stepId: readContactHandler
+    capability: VC:CRUDHandler
+    config:
+      {
+        entity: ontology:Person,
+        persistenceAdapter: persistenceService,
+        operation: Read,
+      }
+    # Input 'id' comes implicitly from path parameter defined in endpoint
+    output: foundContact
+    outputProjection: projection:ContactCoreData
+
+  - stepId: getContactEndpoint
+    capability: VC:RESTEndpoint
+    config:
+      path: '/contacts/{contactId}' # Placeholder name matches handler expectation
+      method: GET
+      responseModel: projection:ContactCoreData
+      handlerSequence: [authN_check, authZ_get, readContactHandler]
+
+  # --- Add PUT and DELETE endpoints similarly ---

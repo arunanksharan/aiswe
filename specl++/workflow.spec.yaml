@@ -1,0 +1,37 @@
+- # --- Workflow Step Definition ---
+  stepId: <string> # Mandatory: e.g., authN_check, getData, validateInput
+
+  # --- Choose ONE way to specify the capability ---
+  capability: <string> # e.g., VC:AuthN_JWTBearer, VC:CRUDHandler
+  # OR
+  capabilityRef: <string> # e.g., *stdAuthN (YAML alias), globalConfig.defaultPersistence (Path)
+
+  config:# Optional: Map providing configuration to the VC instance for this step
+    # --- VC Specific Parameters ---
+    # Example for VC:AuthZ_SimpleRBAC:
+    # required_role: "Admin" | "Editor" # Static value
+    # role_claim_path: "resource_access.api.roles" # Path in JWT claims
+    # Example for VC:CRUDHandler:
+    # entity: ontology:YourEntity # Already known from top-level usually
+    # persistenceAdapterRef: *defaultDB # Reference global config
+    # operation: Create | Read | Update | Delete | List # Specify CRUD op
+    # Example for VC:RESTEndpoint (used when defining endpoint):
+    # path: "/items/{id}"
+    # method: GET
+    # requestModel: projection:ItemInput
+    # responseModel: projection:ItemOutput
+    # handlerSequence: [stepId1, stepId2] # List of step IDs in *this* workflow to execute
+    # --- Dynamic Config Placeholders ---
+    # some_api_key: "env:EXTERNAL_API_KEY"
+    # some_parameter: "llm:Suggest a value based on goalDescription"
+
+  input: <string> # Optional: Source of primary input data
+  # Examples: requestBody, pathParams.id, queryParams.limit, <prevStepId>.<outputName>
+
+  inputProjection: <string> # Optional: projection:<ProjectionName>
+  # Validate/use only this subset of the input data
+
+  output: <string> # Optional: Name for this step's primary output variable
+
+  outputProjection: <string> # Optional: projection:<ProjectionName>
+  # Shape the output data according to this projection before passing on/responding

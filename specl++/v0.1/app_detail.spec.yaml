@@ -1,0 +1,46 @@
+# --- Top Level Application Specification ---
+specVersion: '0.2' # Mandatory: Version of SpecL++ syntax used
+
+goalDescription: | # Mandatory: Human-readable goal
+  Provide a secure RESTful API for managing standard Person contact information,
+  including Create, Read (by ID), Update (by ID), and Delete (by ID) operations.
+  Use JWT authentication and simple role-based access (Reader, Writer).
+
+applicationType: CRUD_API # Mandatory: High-level pattern for Synapse++
+
+targetEntity: ontology:Person # Mandatory for CRUD_API: Primary Ontology entity
+
+# --- Optional Sections Follow ---
+
+globalConfig: # Optional: Define globally accessible configurations or reusable steps
+  persistenceAdapter: &inMemoryContacts # YAML anchor for reuse
+    capability: VC:BasicPersistenceAdapter[InMemory]
+    # No config needed for basic in-memory store in this example
+
+  authNProvider: &jwtAuthN
+    capability: VC:AuthN_JWTBearer
+    config:
+      jwks_url: 'env:AUTH_JWKS_URL' # Get JWKS URL from environment variable
+      audience: 'urn:my-contact-api'
+      issuer: 'env:AUTH_ISSUER_URL'
+    output: authClaims # Name the output claims map
+
+nfrs: # Optional: Basic Non-Functional Requirements
+  target_response_time_ms: 800
+  securityLevel: Medium # Hint for Synapse++/Guardian++
+  compliance: [PII_Handling] # Hints for compliance checks
+
+projectionModels: # Optional: Define data subsets (Constraint 3)
+  # Used for API request/response bodies
+  ContactCore:
+    basedOn: ontology:Person
+    description: 'Core readable/returnable fields for a contact.'
+    includeFields: [id, givenName, familyName, email, telephone] # Assume 'id' is available/generated
+
+  ContactWriteData:
+    basedOn: ontology:Person
+    description: 'Fields allowed when creating or updating a contact.'
+    includeFields: [givenName, familyName, email, telephone]
+
+endpoints:# Mandatory for CRUD_API: List of API endpoints
+  # ... Endpoint definitions below ...

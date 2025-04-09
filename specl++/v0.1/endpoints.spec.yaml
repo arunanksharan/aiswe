@@ -1,0 +1,23 @@
+- # --- Endpoint Definition ---
+  path: <string> # Mandatory: URL path. Use {} for path parameters (e.g., "/users/{userId}")
+  method: <string> # Mandatory: HTTP Method (GET, POST, PUT, DELETE, PATCH)
+  summary: <string> # Optional: Short description for humans/docs
+  parameters: # Optional: List for path and query parameters
+    - name: <string> # Mandatory: Parameter name (e.g., "userId", "limit")
+      in: path | query # Mandatory: Location
+      required: <boolean> # Mandatory
+      schema: # Mandatory: Type definition
+        typeRef: <ontology:TypeName> | <primitive> # e.g., ontology:UUID, ontology:Integer, string, boolean, float
+        description: <string> # Optional
+        # Add other schema constraints like 'pattern', 'minimum' if needed later
+  requestBody: # Optional: Used for POST, PUT, PATCH
+    required: <boolean> # Usually true if present
+    projection: projection:<ProjectionName> # Mandatory if requestBody exists: Reference a projection model
+  responses: # Mandatory: Define potential responses
+    '<HTTPStatusCode>': # String key, e.g., '200', '201', '404'
+      description: <string> # Mandatory
+      projection: projection:<ProjectionName> # Optional: Define structure of success response body
+  workflow: # Mandatory: Ordered list of steps to execute for this endpoint
+    - # --- Workflow Step ---
+      stepId: <string> # Mandatory: Unique ID within this workflow
+      # ... capability, config, input/output details ...
